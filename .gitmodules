@@ -1,0 +1,3 @@
+[submodule "safety-starter-agents"]
+	path = safety-starter-agents
+	url = https://github.com/parhamgohari/safety-starter-agents.git
