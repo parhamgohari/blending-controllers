@@ -31,21 +31,24 @@ def build_mu_optim_pb(dimTheta):
 def compute_next_theta_hat(theta_hat, D, Z, grad, verb=True):
 	global build_problem_theta, pThetaT, pZT, pGradT, thetaOptT, pbThetaT
 	if not build_problem_theta:
+		print ("Create theta problem")
 		pThetaT, pZT, pGradT, thetaOptT, pbThetaT = build_theta_optim_pb(theta_hat.shape[0] , D)
 		build_problem_theta = True
-	pThetaT.value = theta_hat.reshape((theta_hat.shape[0],1))
+	pThetaT.value = theta_hat
 	pZT.value = Z
-	pGradT.value = grad.reshape((grad.shape[0],1))
+	pGradT.value = grad
 	pbThetaT.solve(solver=cp.GUROBI, verbose=verb)
-	return thetaOptT.value[:,0]
+	return thetaOptT.value
 
 def compute_estimate_reward(theta_hat, Z, gamma, xFeat, verb=True):
 	global build_problem_mu, pThetaM, pZM, pFeatM, pGammaM, thetaOptM, pbMu
 	if not build_problem_mu:
+		print ("Create Mu problem")
 		pThetaM, pZM, pFeatM, pGammaM, thetaOptM, pbMu = build_mu_optim_pb(theta_hat.shape[0])
-	pThetaM.value = theta_hat.reshape((theta_hat.shape[0],1))
+		build_problem_mu = True
+	pThetaM.value = theta_hat
 	pZM.value = Z
-	pFeatM.value = xFeat.reshape((xFeat.shape[0],1))
+	pFeatM.value = xFeat
 	pGammaM.value = gamma
 	costVal = pbMu.solve(solver=cp.GUROBI, verbose=verb)
 	return costVal
