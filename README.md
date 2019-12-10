@@ -6,6 +6,7 @@ Requires **Python 3.6 or greater.**
 ## Installation
 Our code uses Safety Gym (https://github.com/openai/safety-gym) to run simulations. Safety Gym requires mujoco_py, so the first step would be installing mujoco_py (https://github.com/openai/mujoco-py) and then installing Safety Gym. Note that mujoco_py **requires Python 3.6 or greater**, so Safety Gym does as well.
 Afterwards, install using pip install
+We furthermore need GUROBI for solving a QCQP (https://www.gurobi.com/) optimization problem in the blending algorithm.
 ```
 git clone https://github.com/parhamgohari/blending-controllers.git
 cd blending-controllers
