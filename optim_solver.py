@@ -28,7 +28,7 @@ def build_mu_optim_pb(dimTheta):
 	problem = cp.Problem(cp.Maximize(costFun), pbConstr)
 	return paramTheta, paramZ, paramFeat, paramGamma, theta, problem
 
-def compute_next_theta_hat(theta_hat, D, Z, grad, verb=True):
+def compute_next_theta_hat(theta_hat, D, Z, grad, verb=False):
 	global build_problem_theta, pThetaT, pZT, pGradT, thetaOptT, pbThetaT
 	if not build_problem_theta:
 		print ("Create theta problem")
@@ -37,10 +37,10 @@ def compute_next_theta_hat(theta_hat, D, Z, grad, verb=True):
 	pThetaT.value = theta_hat
 	pZT.value = Z
 	pGradT.value = grad
-	pbThetaT.solve(solver=cp.GUROBI, verbose=verb)
+	pbThetaT.solve(solver=cp.MOSEK, verbose=verb)
 	return thetaOptT.value
 
-def compute_estimate_reward(theta_hat, Z, gamma, xFeat, verb=True):
+def compute_estimate_reward(theta_hat, Z, gamma, xFeat, verb=False):
 	global build_problem_mu, pThetaM, pZM, pFeatM, pGammaM, thetaOptM, pbMu
 	if not build_problem_mu:
 		print ("Create Mu problem")
@@ -50,5 +50,10 @@ def compute_estimate_reward(theta_hat, Z, gamma, xFeat, verb=True):
 	pZM.value = Z
 	pFeatM.value = xFeat
 	pGammaM.value = gamma
-	costVal = pbMu.solve(solver=cp.GUROBI, verbose=verb)
+	costVal = pbMu.solve(solver=cp.MOSEK, verbose=verb)
 	return costVal
+
+def compute_estimate_reward_fast(theta_hat, Z, gamma, xFeat):
+	xnorm = np.matmul(xFeat.T, Z)[0,0]
+	# print (xnorm)
+	return np.matmul(theta_hat.T, xFeat)[0,0] + np.sqrt(gamma * xnorm)
