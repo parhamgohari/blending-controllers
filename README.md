@@ -1,7 +1,7 @@
 # blending-controllers
-This package blends controllers that optimize different objectives functions.
+This package blends controllers that optimize different objective functions.
 
-In the SafetyGym framework, this cooresponds to blending a safe and a performant controller. The safe controller minimzes the possible collisions with obstacles while the performant controller cares only about reaching the goal.
+In the SafetyGym framework, we blend a safe and a performant controller. The safe controller minimzes the possible collisions with obstacles while the performant controller cares only about efficiently reaching the goal.
 
 ## Supported Platforms
 This package has been tested on Mac OS Catalina and Ubuntu 16.04 LTS, and it is probably fine for most recent Mac and Linux operating systems.
@@ -34,7 +34,7 @@ git submodule update --init --recursive
 ### Optional but recommended
 We recommend to install **conda** and use the virtual environement that contains the dependencies needed for this package.
 - For MacOS, install Anaconda using [this guide](https://docs.conda.io/projects/conda/en/latest/user-guide/install/macos.html)
-- For Linux, install Andaconda using [this guide](https://docs.conda.io/projects/conda/en/latest/user-guide/install/linux.html)
+- For Linux, install Anaconda using [this guide](https://docs.conda.io/projects/conda/en/latest/user-guide/install/linux.html)
 
 Install the conda virtual environment from blending-controllers.
 ```
