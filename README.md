@@ -67,6 +67,28 @@ cd blending-controllers/safety-starter-agents
 
 python -m pip install -e .
 ```
+
+## Learning and testing a policy
+
+### Learning a policy
+
+```
+cd blending-controllers/safety-starter-agents/scripts
+python experiment.py --algo ALGO --task TASK --robot ROBOT --seed SEED
+    --exp_name EXP_NAME --cpu CPU --epochs EPOCHS --steps_per_epoch STEP
+```
+
+where the arguments are optional and given below
+
+* `ALGO` is in `['ppo', 'ppo_lagrangian', 'trpo', 'trpo_lagrangian', 'cpo']`.
+* `TASK` is in `['goal1', 'goal2', 'button1', 'button2', 'push1', 'push2']` .
+* `ROBOT` is in `['point', 'car', 'doggo']`.
+* `SEED` is an integer. In the paper experiments, we used seeds of 0, 10, and 20, but results may not reproduce perfectly deterministically across machines.
+* `CPU` is an integer for how many CPUs to parallelize across.
+* `EPOCHS` is the number of epochs to use for the simulation.
+* `STEP` is the number of steps per epochs for the simulation.
+* `EXP_NAME` is an argument for the name of the folder where results will be saved. The save folder will be placed in `blending-controllers/safety-starter-agents/data`.
+
 <!--
 ## Learning a safe or performant policy
 ```
