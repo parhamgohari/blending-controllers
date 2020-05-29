@@ -587,6 +587,6 @@ if __name__ == '__main__':
     print (args.seed, args.idProcess)
     env.seed(args.seed + args.idProcess)
     one_trace_blending(env, controller_list, lam=1.0, delta=0.05, sigma=0.01,
-                       theta_max= 1.5, feat_max=1, num_env_interact=int(2e6),
+                       theta_max= 1.5, feat_max=1, num_env_interact=int(100000),
                        steps_per_epoch=30000, max_ep_len=1000,
                        save_file= args.data_contr, idProcess=args.idProcess)
