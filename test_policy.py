@@ -38,6 +38,9 @@ def run_policy(env, get_action, render=False, num_env_interact=int(100000),
             o, r, done, c, ep_ret, ep_len, ep_cost = env.reset(), 0, False, 0, 0, 0, 0
         if t==0 or t % steps_per_epoch !=0:
             continue
+        if c_epoch != 0 and c_epoch % 10 == 0:
+            np.savez(save_file+str(idProcess), ret=ep_ret_save[:c_epoch,:],
+                cost=cost_ret_save[:c_epoch,:], crate=cost_rate_save[:c_epoch])
         c_epoch += 1
         c_step = 0
         cost_rate_save[c_epoch-1] = cum_cost / (c_epoch*steps_per_epoch)
@@ -69,6 +72,9 @@ if __name__ == '__main__':
                                         args.deterministic)
     env.seed(args.seed + args.idProcess)
     run_policy(env, get_action, render=not(args.norender),
-                num_env_interact=int(100000), steps_per_epoch=30000,
+                num_env_interact=int(4000000), steps_per_epoch=30000,
                 max_ep_len=1000, save_file= args.data_contr,
                 idProcess=args.idProcess)
+
+# python test_policy.py safety-starter-agents/data/2020-04-18_ppo_complete/2020-04-18_23-29-38-ppo_complete_s10/ --seed 200 --data_contr ppo_complete_policy --idProcess 0 --norender
+# python plot_result.py --logdir ppo_ppoL_blending --legend Blended --colors red --num_traces 10 --ind_traces 0 --steps_per_epoch 30000 --window 5

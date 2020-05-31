@@ -1,7 +1,7 @@
 #!/bin/bash
-sinit=100
-outerloop=2
-innerloop=2
+sinit=200
+outerloop=10
+innerloop=10
 for i in $(seq 1 $outerloop)
 do
     # echo $i

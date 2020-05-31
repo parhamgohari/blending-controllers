@@ -40,7 +40,7 @@ def preprocess_cost_reward(data, ind_trace, steps_per_epoch, window=1):
 
 def preprocess_cost_rate(data, ind_trace, steps_per_epoch, window=1):
     current_data = data[ind_trace]
-    print (current_data)
+    # print (current_data)
     time_axis = np.array([ (i+1)*steps_per_epoch for i in range(current_data.shape[0])])
     if window > 2:
         time_axis = moving_average(time_axis, window)
@@ -53,16 +53,35 @@ def preprocess_pr(data_arm, data_dx, window=1):
     for i in range(data_arm.shape[0]):
         for j in range(data_arm.shape[1]):
             res_dx[i,j] = data_dx[i, int(data_arm[i,j]), j]
-    std_res = np.std(res_dx, axis=0)
-    mean_res = np.mean(res_dx, axis=0)
-    min_val = mean_res - std_res
-    max_val = mean_res + std_res
+    # # print(np.sum(res_dx.flatten() < 0))
+    # std_res = np.std(res_dx, axis=0)
+    # mean_res = np.mean(res_dx, axis=0)
+    # min_val = mean_res - std_res
+    # max_val = mean_res + std_res
+    # window = 10000
+    # if window > 2:
+    #     mean_res = moving_average(mean_res, window)
+    #     min_val = moving_average(min_val, window)
+    #     max_val = moving_average(max_val, window)
+    #     time_axis = moving_average(time_axis, window)
+    # return time_axis, mean_res, min_val, max_val
+    # res_dx = res_dx > 0
+    # mean_res = np.mean(res_dx, axis=0)
+    mean_res = res_dx[0,:]
+    # mean_avrg = 1-mean_res
+    mean_avrg = np.zeros(mean_res.shape[0])
+    for i in range(mean_res.shape[0]):
+    	if i == 0:
+    		mean_avrg[i] = mean_res[i]
+    		continue
+    	# mean_avrg[i] = (i * mean_res[i-1] + mean_res[i])/ (i+1)
+    	mean_avrg[i] = mean_avrg[i-1] + mean_res[i]
+    # window = 500000  # 630000
     if window > 2:
-        mean_res = moving_average(mean_res, window)
-        min_val = moving_average(min_val, window)
-        max_val = moving_average(max_val, window)
+        mean_res = moving_average(mean_avrg, window)
         time_axis = moving_average(time_axis, window)
-    return time_axis, mean_res, min_val, max_val
+    return time_axis, mean_res
+
 
 def parse_data(logdir, legend, colors, dict_key, num_traces,
                 ind_traces, window=1, steps_per_epoch=30000):
@@ -73,7 +92,8 @@ def parse_data(logdir, legend, colors, dict_key, num_traces,
          for key in res_data:
             if key == 'ap':
                 continue
-            final_dict[key] = dict()
+            if key not in final_dict:
+            	final_dict[key] = dict()
          for key in res_data:
             if key in ['ret', 'cost']:
                 final_dict[key][legend_data] = (color_data, \
@@ -120,8 +140,11 @@ if __name__ == '__main__':
     args = parser.parse_args()
     if args.ind_traces is None:
         args.ind_traces = [0 for i in args.legend]
-    # The yAxis of the different plots
-    dict_key_y = {'ap' : 'Arms picked', 'px' : '$\Delta x_t$',
+    if args.num_traces is None:
+    	args.num_traces = [1 for i in args.legend]
+    # print (args.logdir, args.legend, args.colors)
+    # The yAxis of the different plots $\frac{1}{t}\sum_t \Delta x_t$ Percentage of correct picked arms
+    dict_key_y = {'ap' : 'Arms picked', 'px' : '$ \sum_t \Delta x_t $',
                 'ret' : 'Episode reward', 'cost' : 'Episode cost',
                 'crate' : 'Cost rate'}
     dict_key_x = {'ap' : 'Arms picked', 'px' : 'Environment Interacts',
@@ -131,5 +154,6 @@ if __name__ == '__main__':
     finalData = parse_data(args.logdir, args.legend, args.colors, dict_key_y,
                     args.num_traces, args.ind_traces, args.window,
                     args.steps_per_epoch)
+    # print (finalData.keys(), finalData['crate'].keys())
     plot_result(dict_key_y, dict_key_x, finalData)
     # print (finalData)

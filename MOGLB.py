@@ -91,7 +91,7 @@ def compute_pgap(objective):
     res = np.zeros(objective.shape[1])
     for x in range(res.shape[0]):
         temp_x = objective - np.tile(objective[:,x:(x+1)],2)
-        res[x] = np.max(np.max(temp_x, axis=1))
+        res[x] = np.maximum(np.max(np.max(temp_x, axis=1)),0)
     return res
 
 def compute_pareto_nd(xt, objective):
@@ -99,15 +99,26 @@ def compute_pareto_nd(xt, objective):
     Compute the pareto non-dominace gap. Useful to show the
     subregret bounds
     '''
-    eps = np.inf
-    for j in range(objective.shape[0]):
-        eps_j = -np.inf
-        for x in range(objective.shape[1]):
-            eps_temp = np.maximum(0,objective[j,x]-objective[j,xt])
-            eps_j =  np.maximum(eps_j, eps_temp)
-        # print (eps_j)
-        eps = np.minimum(eps, eps_j)
-    return eps
+    other_r = objective[0][1-xt]
+    other_c = objective[1][1-xt]
+    curr_r = objective[0][xt]
+    curr_c = objective[1][xt]
+
+    diff_r = other_r - curr_r
+    diff_c = other_c - curr_c
+    if diff_r*diff_c >= 0:
+        return np.maximum(np.maximum(diff_r,diff_c), 0)
+    else:
+        return 0 
+    # eps = np.inf
+    # for j in range(objective.shape[0]):
+    #     eps_j = -np.inf
+    #     for x in range(objective.shape[1]):
+    #         eps_temp = np.maximum(0,objective[j,x]-objective[j,xt])
+    #         eps_j =  np.maximum(eps_j, eps_temp)
+    #     # print (eps_j)
+    #     eps = np.minimum(eps, eps_j)
+    # return eps
 
 def blending_algorithm(env, feat_objective, lam=1.0, delta=0.1, sigma=1.0,
                        theta_max= 10, feat_max=1.0, num_env_interact=1e6,
@@ -459,7 +470,7 @@ def one_trace_blending(env, feat_objective, lam=1.0, delta=0.05, sigma=1.0,
         # Diagonalize Vt since it's going to be used twice for theta_t+1 and mu
         eVal, P = np.linalg.eig(Vt)
         VtInv = np.matmul(P, np.matmul(np.diag(1.0/eVal), P.T))
-        VtSqrtInv = np.matmul(P, np.matmul(np.diag(1.0/np.sqrt(eVal)),P.T))
+        # VtSqrtInv = np.matmul(P, np.matmul(np.diag(1.0/np.sqrt(eVal)),P.T))
         # Compute theta_t+1
         for i in range(nObj):
             theta_t[:,i] = np.matmul(VtInv, Xpast[:,i:(i+1)]).flatten()
@@ -469,8 +480,9 @@ def one_trace_blending(env, feat_objective, lam=1.0, delta=0.05, sigma=1.0,
         # Compute the UCB index for each controllers
         for x in range(nArm):
             featX = Xt[:,x:(x+1)]
-            n1 = np.linalg.norm(np.matmul(VtSqrtInv,featX))
-            tempC = rE * (1.0/n1) * np.matmul(VtInv, featX)
+            tempVect = np.matmul(VtInv, featX)
+            n1 = np.sqrt(np.dot(featX[:,0], tempVect[:,0]))
+            tempC = rE * (1.0/n1) * tempVect
             for i in range(nObj):
                 mu_t[i,x] = np.dot(theta_t[:,i] + tempC[:,0], featX[:,0])
         # Compute the pareto gaps
@@ -500,7 +512,9 @@ def one_trace_blending(env, feat_objective, lam=1.0, delta=0.05, sigma=1.0,
 
         if t==0 or t % steps_per_epoch !=0:
             continue
-
+        if c_epoch != 0 and c_epoch % 10 == 0:
+            np.savez(save_file+str(idProcess), ap=arm_picked[:t], px=pareto_x[:,:t],
+            ret=ep_ret_save[:c_epoch,:], cost=cost_ret_save[:c_epoch,:], crate=cost_rate_save[:c_epoch])
         c_epoch += 1
         c_step = 0
         cost_rate_save[c_epoch-1] = cum_cost / (c_epoch*steps_per_epoch)
@@ -586,7 +600,7 @@ if __name__ == '__main__':
     #                    num_outer_run=10, save_data_path=args.data_contr)
     print (args.seed, args.idProcess)
     env.seed(args.seed + args.idProcess)
-    one_trace_blending(env, controller_list, lam=1.0, delta=0.05, sigma=0.01,
-                       theta_max= 1.5, feat_max=1, num_env_interact=int(100000),
+    one_trace_blending(env, controller_list, lam=1.0, delta=0.2, sigma=0.01,
+                       theta_max= 1.5, feat_max=1, num_env_interact=int(4000000),
                        steps_per_epoch=30000, max_ep_len=1000,
                        save_file= args.data_contr, idProcess=args.idProcess)
