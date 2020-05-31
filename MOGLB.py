@@ -43,7 +43,8 @@ def load_policy(fpath, itr='last', deterministic=False):
     get_action = lambda x : sess.run(action_op, feed_dict={model['x']: x[None,:]})[0]
     get_v = lambda x: sess.run(model['v'], feed_dict={model['x']: x[None, :]})[0]
     get_vc = lambda x: sess.run(model['vc'], feed_dict={model['x']: x[None, :]})[0]
-    get_objective = lambda x: np.array([[get_v(x)],[get_vc(x)]])
+    # get_objective = lambda x: np.array([[get_v(x)],[get_vc(x)]])
+    get_objective = lambda x: np.array([[get_v(x)],[-get_vc(x)]])
     # try to load environment from save
     # (sometimes this will fail because the environment could not be pickled)
     try:
@@ -73,8 +74,10 @@ def feat_map(zt=None, xt= None, args_list=None, env=None):
         if feat_t is None:
             featVal = objective_fun(zt)
             feat_t = featVal / np.linalg.norm(featVal)
+            # feat_t = featVal
         else:
             featVal = objective_fun(zt)
+            # feat_t = np.concatenate((feat_t, featVal), axis=1)
             feat_t = np.concatenate((feat_t, featVal/np.linalg.norm(featVal)),
                                         axis=1)
         list_act.append(curr_act(zt))
@@ -109,7 +112,7 @@ def compute_pareto_nd(xt, objective):
     if diff_r*diff_c >= 0:
         return np.maximum(np.maximum(diff_r,diff_c), 0)
     else:
-        return 0 
+        return 0
     # eps = np.inf
     # for j in range(objective.shape[0]):
     #     eps_j = -np.inf
@@ -220,11 +223,16 @@ def blending_algorithm(env, feat_objective, lam=1.0, delta=0.1, sigma=1.0,
         # Compute the pareto gaps
         eps_hat = compute_pgap(mu_t)
         eps_true = compute_pgap(yt)
-        Ot = np.argwhere(eps_hat == np.min(eps_hat)).flatten()
+        Ot = np.argwhere(eps_hat == np.max(eps_hat)).flatten()
         cum_regret_approx += eps_hat[xt]
         cum_regret_true += eps_true[xt]
         sum_pareto_regret = (t*sum_pareto_regret + compute_pareto_nd(xt, yt))/(t+1)
+        # print (t)
         # print (yt)
+        # print (mu_t)
+        # print (eps_hat)
+        # print (Ot)
+        # print ('---------')
         # print (eps_hat, eps_true)
         # print('----------------------------')
 
@@ -456,10 +464,14 @@ def one_trace_blending(env, feat_objective, lam=1.0, delta=0.05, sigma=1.0,
     c_epoch = 0
     c_step = 0
     for t in range(num_env_interact):
+        # env.render()
+        # time.sleep(1e-3)
         # print(t)
         # select a policy at random from the Pareto set
         xt = np.random.choice(Ot)
         (o2, r, done, info), yt, Xt = feat_map(o, xt, feat_objective, env)
+        # print (yt)
+        # print(Xt)
         c = info.get('cost', 0)
         # Temp variable saving X1:t * Y1:t
         for i in range(nObj):
@@ -489,6 +501,17 @@ def one_trace_blending(env, feat_objective, lam=1.0, delta=0.05, sigma=1.0,
         eps_hat = compute_pgap(mu_t)
         # eps_true = compute_pgap(yt)
         Ot = np.argwhere(eps_hat == np.min(eps_hat)).flatten()
+        # print (Ot)
+        # print (yt)
+        # print(mu_t)
+        # print (eps_hat)
+        # print ('-----')
+        # print (t)
+        # print (yt)
+        # print (mu_t)
+        # print (eps_hat)
+        # print (Ot)
+        # print ('---------')
 
         # Save the useful quantities
         arm_picked[t] = xt
@@ -515,6 +538,12 @@ def one_trace_blending(env, feat_objective, lam=1.0, delta=0.05, sigma=1.0,
         if c_epoch != 0 and c_epoch % 10 == 0:
             np.savez(save_file+str(idProcess), ap=arm_picked[:t], px=pareto_x[:,:t],
             ret=ep_ret_save[:c_epoch,:], cost=cost_ret_save[:c_epoch,:], crate=cost_rate_save[:c_epoch])
+        print(' Cost : ', np.mean(cost_ret_save[c_epoch,:]),
+                np.std(cost_ret_save[c_epoch,:]), np.max(cost_ret_save[c_epoch,:]),
+                np.min(cost_ret_save[c_epoch,:]))
+        print(' Rew : ', np.mean(ep_ret_save[c_epoch,:]),
+                np.std(ep_ret_save[c_epoch,:]), np.max(ep_ret_save[c_epoch,:]),
+                np.min(ep_ret_save[c_epoch,:]))
         c_epoch += 1
         c_step = 0
         cost_rate_save[c_epoch-1] = cum_cost / (c_epoch*steps_per_epoch)
@@ -583,7 +612,7 @@ if __name__ == '__main__':
     # print(compute_pareto_nd(0, obj3))
     # print(compute_pareto_nd(1, obj3))
     # Start the blending algorithm
-    # logger_kwargs = setup_logger_kwargs(args.exp_name, args.seed)
+    logger_kwargs = setup_logger_kwargs(args.exp_name, args.seed)
     # blending_algorithm(env, controller_list, lam=1.0, delta=0.2, sigma=0.01,
     #                    theta_max= 1.5, feat_max=1, num_env_interact=int(4e6),
     #                    steps_per_epoch=30000, seed=args.seed, max_ep_len=1000,
@@ -598,9 +627,9 @@ if __name__ == '__main__':
     #                    theta_max= 1.5, feat_max=1.0, num_run=10,
     #                    max_ep_len=1000, max_env_interact_per_run=1000,
     #                    num_outer_run=10, save_data_path=args.data_contr)
-    print (args.seed, args.idProcess)
-    env.seed(args.seed + args.idProcess)
-    one_trace_blending(env, controller_list, lam=1.0, delta=0.2, sigma=0.01,
+    # print (args.seed, args.idProcess)
+    # env.seed(args.seed + args.idProcess)
+    one_trace_blending(env, controller_list, lam=1, delta=0.2, sigma=0.01,
                        theta_max= 1.5, feat_max=1, num_env_interact=int(4000000),
                        steps_per_epoch=30000, max_ep_len=1000,
                        save_file= args.data_contr, idProcess=args.idProcess)

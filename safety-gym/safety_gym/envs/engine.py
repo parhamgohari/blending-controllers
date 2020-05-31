@@ -1284,7 +1284,7 @@ class Engine(gym.Env, gym.utils.EzPickle):
                     info['goal_met'] = True
                     reward += self.reward_goal
             res_r_c[0,ind_act] = reward
-            res_r_c[1,ind_act] = info.get('cost',0)
+            res_r_c[1,ind_act] = -info.get('cost',0)
         # Proceed to the main action
         info = {}
         self.sim.set_state(curr_state)
@@ -1332,7 +1332,7 @@ class Engine(gym.Env, gym.utils.EzPickle):
                 else:
                     self.done = True
         res_r_c[0,ind_main_action] = reward
-        res_r_c[1,ind_main_action] = info.get('cost',0)
+        res_r_c[1,ind_main_action] = -info.get('cost',0)
         # Timeout
         self.steps += 1
         if self.steps >= self.num_steps:

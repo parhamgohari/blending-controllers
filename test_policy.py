@@ -78,3 +78,4 @@ if __name__ == '__main__':
 
 # python test_policy.py safety-starter-agents/data/2020-04-18_ppo_complete/2020-04-18_23-29-38-ppo_complete_s10/ --seed 200 --data_contr ppo_complete_policy --idProcess 0 --norender
 # python plot_result.py --logdir ppo_ppoL_blending --legend Blended --colors red --num_traces 10 --ind_traces 0 --steps_per_epoch 30000 --window 5
+# ./mprocess_moglb.sh --fpath_controllers safety-starter-agents/data/2020-04-18_ppo_complete/2020-04-18_23-29-38-ppo_complete_s10/ safety-starter-agents/data/2020-04-18_ppo_lagragian_complete/2020-04-18_12-49-35-ppo_lagragian_complete_s10/ --data_contr ppo_ppoL_blending
