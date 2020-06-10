@@ -1,8 +1,3 @@
-| Title      | Blending Controllers via Multi-Objective Bandits								                |
-|------------|----------------------------------------------------------------------------------------------|
-| Authors    | Parham Gohari, Franck Djeumou, Abraham P. Vinod, and Ufuk Topcu                              |
-| Conference | NeurIPS, 2020                                                          						|
-
 # Blending Controllers via Multi-Objective Bandits
 This package blends controllers that optimize different objective functions.
 
