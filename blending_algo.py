@@ -110,6 +110,35 @@ def compute_pareto_gap(xt, objective):
     else:
         return 0
 
+def compute_pareto_nd(xt, objective):
+    '''
+    Compute the pareto non-dominace gap. Useful to show the
+    subregret bounds
+    '''
+    other_r = objective[0][1-xt]
+    other_c = objective[1][1-xt]
+    curr_r = objective[0][xt]
+    curr_c = objective[1][xt]
+
+    diff_r = other_r - curr_r
+    diff_c = other_c - curr_c
+    if diff_r*diff_c >= 0:
+        return np.maximum(np.maximum(diff_r,diff_c), 0)
+    else:
+        return 0
+
+def compute_pgap(objective):
+    '''
+    Compute the gap given a matrix whose column represent
+    each arms and the row are the different objectives
+    @Return     :   an array containing the pareto gap for each arm
+    '''
+    res = np.zeros(objective.shape[1])
+    for x in range(res.shape[0]):
+        temp_x = objective - np.tile(objective[:,x:(x+1)],2)
+        res[x] = np.maximum(np.max(np.max(temp_x, axis=1)),0)
+    return res
+
 
 def one_trace_blending(env, feat_objective, lam=1.0, delta=0.05, sigma=1.0,
                        theta_max= 10, feat_max=1.0, num_env_interact=1e6,
@@ -147,6 +176,9 @@ def one_trace_blending(env, feat_objective, lam=1.0, delta=0.05, sigma=1.0,
     ep_ret_save = np.zeros((epochs, int(steps_per_epoch/max_ep_len)))
     cost_ret_save = np.zeros((epochs, int(steps_per_epoch/max_ep_len)))
     cost_rate_save = np.zeros(epochs)
+    save_theta_rev_cost = np.zeros((num_env_interact, 2,d))
+    save_context = np.zeros((num_env_interact, d))
+    save_rev_cost_im = np.zeros((num_env_interact, 2))
 
     c_epoch = 0
     c_step = 0
@@ -173,6 +205,12 @@ def one_trace_blending(env, feat_objective, lam=1.0, delta=0.05, sigma=1.0,
         # Diagonalize Vt since it's going to be used twice for theta_t+1 and mu
         eVal, P = np.linalg.eig(Vt)
         VtInv = np.matmul(P, np.matmul(np.diag(1.0/eVal), P.T))
+
+        # Store the variable for linear approximation proof
+        save_theta_rev_cost[t,:,:] = theta_t[:,:]
+        save_context[t,:] = Xt[:,xt]
+        save_rev_cost_im[t,:] = yt[:, xt]
+
 
         # Compute theta_t hat
         for i in range(nObj):
@@ -225,29 +263,33 @@ def one_trace_blending(env, feat_objective, lam=1.0, delta=0.05, sigma=1.0,
         # Save the data into a file every 'save_epochs' epochs
         save_epochs = 5
         if c_epoch != 0 and c_epoch % save_epochs == 0:
-            np.savez(save_file+str(idProcess), ap=arm_picked[:t], 
-                px=pareto_x[:,:t], ret=ep_ret_save[:c_epoch,:], 
-                cost=cost_ret_save[:c_epoch,:], 
-                crate=cost_rate_save[:c_epoch])
+            np.savez(save_file+str(idProcess), ap=arm_picked[:t],
+                px=pareto_x[:,:t], ret=ep_ret_save[:c_epoch,:],
+                cost=cost_ret_save[:c_epoch,:],
+                crate=cost_rate_save[:c_epoch], context=save_context,
+                theta=save_theta_rev_cost, revcost=save_rev_cost_im)
 
         # Do some printing
         print ('IdProcess , Epoch : ', idProcess, c_epoch)
         print ('Time per epoch (seconds) : ', (time.time()-start_time)/(c_epoch+1))
-        print(' Cost : ', np.mean(cost_ret_save[c_epoch,:]),
+        print('Cost : ', np.mean(cost_ret_save[c_epoch,:]),
                 np.std(cost_ret_save[c_epoch,:]), np.max(cost_ret_save[c_epoch,:]),
                 np.min(cost_ret_save[c_epoch,:]))
-        print(' Rew : ', np.mean(ep_ret_save[c_epoch,:]),
+        print('Rew : ', np.mean(ep_ret_save[c_epoch,:]),
                 np.std(ep_ret_save[c_epoch,:]), np.max(ep_ret_save[c_epoch,:]),
                 np.min(ep_ret_save[c_epoch,:]))
+        print('Normalized theta : ', theta_t[:,0]/np.linalg.norm(theta_t[:,0]),
+                theta_t[:,1]/np.linalg.norm(theta_t[:,1]))
         print('----------------------------------------------')
-
         # Increment epoch and reset the current step
         c_epoch += 1
         c_step = 0
 
     # Save the last result in a the file
     np.savez(save_file+str(idProcess), ap=arm_picked, px=pareto_x,
-            ret=ep_ret_save, cost=cost_ret_save, crate=cost_rate_save)
+            ret=ep_ret_save, cost=cost_ret_save, crate=cost_rate_save,
+            context=save_context, theta=save_theta_rev_cost,
+            revcost=save_rev_cost_im)
 
 
 if __name__ == '__main__':
@@ -284,15 +326,15 @@ if __name__ == '__main__':
                     args.itr if args.itr >= 0 else 'last', args.deterministic)
         controller_list.append((get_action, get_objective))
 
-    # Set the seed of the environment 
+    # Set the seed of the environment
     print (args.seed, args.idProcess)
     env.seed(args.seed + args.idProcess)
 
     # Execute the algorithm
-    one_trace_blending(env, controller_list, lam=args.lam, delta=args.delta, 
-                        sigma=args.sigma, theta_max= args.theta_max, 
+    one_trace_blending(env, controller_list, lam=args.lam, delta=args.delta,
+                        sigma=args.sigma, theta_max= args.theta_max,
                         feat_max=args.feat_max, render=args.render,
                         num_env_interact=args.num_env_interact,
-                        steps_per_epoch=args.steps_per_epoch, 
+                        steps_per_epoch=args.steps_per_epoch,
                         max_ep_len=args.max_ep_len, save_file= args.save_file,
                         idProcess=args.idProcess)
