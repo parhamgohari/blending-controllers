@@ -101,7 +101,7 @@ if __name__ == '__main__':
     parser.add_argument('--seed', type=int, default=301)
     parser.add_argument('--save_file', type=str, default='')
     parser.add_argument('--idProcess', type=int, default='0')
-    parser.add_argument('--num_env_interact', type=int, default=3300000)
+    parser.add_argument('--num_env_interact', type=int, default=1000000)
     parser.add_argument('--steps_per_epoch', type=int, default=30000)
     parser.add_argument('--max_ep_len', type=int, default=1000)
     args = parser.parse_args()

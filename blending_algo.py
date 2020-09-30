@@ -27,6 +27,7 @@ def load_policy(fpath, itr='last', deterministic=False):
     # load the things!
     sess = tf.Session(graph=tf.Graph())
     model = restore_tf_graph(sess, osp.join(fpath, 'simple_save'+itr))
+    print ('KEYSSSSS : ', model.keys())
     # get the correct op for executing actions
     if deterministic and 'mu' in model.keys():
         # 'deterministic' is only a valid option for SAC policies
@@ -37,10 +38,13 @@ def load_policy(fpath, itr='last', deterministic=False):
         action_op = model['pi']
     # make function for producing an action given a single state
     get_action = lambda x : sess.run(action_op, feed_dict={model['x']: x[None,:]})[0]
-    get_v = lambda x: sess.run(model['v'], feed_dict={model['x']: x[None, :]})[0]
-    get_vc = lambda x: sess.run(model['vc'], feed_dict={model['x']: x[None, :]})[0]
-    # get_objective = lambda x: np.array([[get_v(x)],[get_vc(x)]])
-    get_objective = lambda x: np.array([[get_v(x)],[-get_vc(x)]])
+    # get_v = lambda x: sess.run(model['v'], feed_dict={model['x']: x[None, :]})[0]
+    # get_vc = lambda x: sess.run(model['vc'], feed_dict={model['x']: x[None, :]})[0]
+    # get_objective = lambda x: np.array([[get_v(x)],[-get_vc(x)]])
+    
+    get_v = lambda x, a: sess.run(model['r_im'], feed_dict={model['x']: x[None, :], model['a']: a[None,:]})[0]
+    get_vc = lambda x, a: sess.run(model['c_im'], feed_dict={model['x']: x[None, :], model['a']: a[None,:]})[0]
+    get_objective = lambda x, a: np.array([[get_v(x,a)],[-get_vc(x,a)]])
     # try to load environment from save
     # (sometimes this will fail because the environment could not be pickled)
     try:
@@ -67,16 +71,20 @@ def feat_map(zt=None, xt= None, args_list=None, env=None):
     list_act = []
     feat_t = None
     for elem, (curr_act, objective_fun) in enumerate(args_list):
+        curr_a = curr_act(zt)
+        list_act.append(curr_a)
         if feat_t is None:
-            featVal = objective_fun(zt)
-            feat_t = featVal / np.linalg.norm(featVal)
+            featVal = objective_fun(zt, curr_a)
+            feat_t = featVal
+            # featVal = objective_fun(zt)
+            # feat_t = featVal / np.linalg.norm(featVal)
             # feat_t = featVal
         else:
-            featVal = objective_fun(zt)
-            # feat_t = np.concatenate((feat_t, featVal), axis=1)
-            feat_t = np.concatenate((feat_t, featVal/np.linalg.norm(featVal)),
-                                        axis=1)
-        list_act.append(curr_act(zt))
+            featVal = objective_fun(zt, curr_a)
+            feat_t = np.concatenate((feat_t, featVal), axis=1)
+            # featVal = objective_fun(zt)
+            # feat_t = np.concatenate((feat_t, featVal/np.linalg.norm(featVal)),
+            #                             axis=1)
     o2_true, r_true, done_true, info_true, yt = env.step_simulate(xt, list_act)
     return (o2_true, r_true, done_true, info_true), yt, feat_t
 
@@ -152,7 +160,8 @@ def one_trace_blending(env, feat_objective, lam=1.0, delta=0.05, sigma=1.0,
     o, r, done, c, ep_ret, ep_cost, ep_len = env.reset(), 0, False, 0, 0, 0, 0
     epochs = int(num_env_interact/steps_per_epoch)
     nArm = len(feat_objective)
-    d = feat_objective[0][1](o).shape[0]
+    # d = feat_objective[0][1](o).shape[0]
+    d = 2
     nObj = d
     cum_cost = 0
 
@@ -228,11 +237,17 @@ def one_trace_blending(env, feat_objective, lam=1.0, delta=0.05, sigma=1.0,
             for i in range(nObj):
                 mu_t[i,x] = np.dot(theta_t[:,i] + tempC[:,0], featX[:,0])
 
-        # Compute the pareto gaps
         eps_hat = compute_pgap(mu_t)
-
         # Compute the new pareto set based on the pareto gaps
         Ot = np.argwhere(eps_hat == np.min(eps_hat)).flatten()
+
+        # # Compute the pareto gaps
+        # arm_1_sum = mu_t[0,0] + mu_t[1,0]
+        # arm_2_sum = mu_t[0,1] + mu_t[1,1]
+        # if arm_1_sum > arm_2_sum:
+        #     Ot = np.array([0])
+        # else:
+        #     Ot = np.array([1])
 
         # Save the useful quantities
         arm_picked[t] = xt
@@ -247,6 +262,10 @@ def one_trace_blending(env, feat_objective, lam=1.0, delta=0.05, sigma=1.0,
         ep_len += 1
         terminal = done or (ep_len == max_ep_len)
         if terminal:
+            # print(t, 'Mu_hat (perf->safe)', mu_t[:,0], mu_t[:,1])
+            # print(t, 'Eps_hat', eps_hat)
+            # print(t, 'avg rew, avg cost',float(ep_ret)/max_ep_len, float(ep_cost)/max_ep_len)
+            # print('----')
             if c_epoch < epochs:
                 ep_ret_save[c_epoch, c_step] = ep_ret
                 cost_ret_save[c_epoch, c_step] = ep_cost
